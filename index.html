@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Birthday Celebration</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js CDN for 3D rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- GSAP CDN for professional-grade animation control -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <style>
+        /* Custom CSS for body and canvas to ensure full-screen 3D rendering */
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            background-color: #0d0d1a; /* Dark background for better contrast */
+        }
+        #scene-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        canvas {
+            display: block;
+        }
+        /* Styles for the final overlay text */
+        .overlay-text {
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+            text-shadow: 0 0 10px #ff00ff, 0 0 20px #00ffff;
+        }
+        .text-active {
+            opacity: 1 !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="scene-container">
+        <!-- Overlay for the final "Happy Birthday" text -->
+        <div id="birthday-text"
+             class="overlay-text fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center text-6xl md:text-8xl font-black tracking-widest text-yellow-300 z-40">
+            Happy Birthday Someone Special!
+        </div>
+
+        <!-- Input Prompt Overlay (acts as the initial loading/input screen) -->
+        <div id="prompt-modal" class="fixed top-0 left-0 w-full h-full flex items-center justify-center bg-black/90 z-50">
+            <div class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full text-center transform scale-100 transition-transform duration-500">
+                <h2 class="text-3xl font-extrabold mb-4 text-pink-600">🎉 Happy Birthday! 🎉</h2>
+                <p class="text-gray-700 mb-6">Who are we celebrating today? Enter their name:</p>
+                <input type="text" id="name-input" placeholder="e.g., Alex"
+                       class="w-full p-3 mb-6 border-2 border-purple-400 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-300 text-xl font-semibold text-center"
+                       maxlength="25">
+                <button id="start-button"
+                        class="w-full bg-purple-600 hover:bg-purple-700 text-white font-extrabold py-3 rounded-xl transition duration-300 transform hover:scale-[1.02] shadow-lg shadow-purple-500/50">
+                    Start Animation
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global Three.js variables
+        let scene, camera, renderer, confetti = [], balloons = [];
+        let globalName = "Someone Special"; // Variable to hold the name entered by the user
+
+        // Configuration
+        const config = {
+            roomSize: 20,
+            numBalloons: 15,
+            numConfetti: 100,
+            animationDuration: 15 // Total seconds for the main camera path
+        };
+
+        // Utility function to get a random number within a range
+        const rand = (min, max) => Math.random() * (max - min) + min;
+
+        // --- SCENE INITIALIZATION ---
+        function initScene(name) {
+            // Set the name retrieved from the input modal
+            globalName = name;
+            
+            const container = document.getElementById('scene-container');
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+
+            // 1. Scene
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x100030, 10, 35); // Slight fog for depth
+
+            // 2. Camera (Starting position)
+            camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 100);
+            camera.position.set(20, 10, 20); // Far back, high up
+            camera.lookAt(0, 5, 0);
+
+            // 3. Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(width, height);
+            renderer.setClearColor(0x100030);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            // 4. Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+
+            const spotLight = new THREE.SpotLight(0xffffff, 30, 50, Math.PI * 0.2, 0.5, 1);
+            spotLight.position.set(0, 15, 0);
+            spotLight.castShadow = true;
+            spotLight.shadow.mapSize.width = 1024;
+            spotLight.shadow.mapSize.height = 1024;
+            scene.add(spotLight);
+
+            // 5. Build Room Elements
+            createRoom();
+            createCake();
+            createBalloons();
+            createConfetti();
+            createGifts(); // New: Add gift boxes
+
+            // 6. Start the show
+            animate();
+            setupCameraTimeline();
+
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- OBJECT CREATION ---
+
+        function createRoom() {
+            const size = config.roomSize;
+            // Updated room colors for a more vibrant party look
+            const wallMaterial = new THREE.MeshPhongMaterial({ color: 0x5555ff, side: THREE.BackSide });
+            const floorMaterial = new THREE.MeshPhongMaterial({ color: 0xff8888 });
+
+            // Floor
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(size * 2, size * 2), floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = 0;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // Walls (simplified large cube with back side rendered)
+            const roomGeometry = new THREE.BoxGeometry(size * 2, size * 2, size * 2);
+            const room = new THREE.Mesh(roomGeometry, wallMaterial);
+            room.position.y = size; // Center the room floor at y=0
+            room.receiveShadow = true;
+            scene.add(room);
+        }
+
+        function createCake() {
+            const cakeGroup = new THREE.Group();
+            cakeGroup.position.set(0, 1.5, -config.roomSize / 2 + 2); // Place near a 'wall'
+
+            // Bottom layer
+            const baseGeo = new THREE.CylinderGeometry(3, 3, 2, 32);
+            const baseMat = new THREE.MeshPhongMaterial({ color: 0xe6b800 }); // Yellow cake
+            const base = new THREE.Mesh(baseGeo, baseMat);
+            base.position.y = 1;
+            base.castShadow = true;
+            cakeGroup.add(base);
+
+            // Middle layer
+            const midGeo = new THREE.CylinderGeometry(2.5, 2.5, 1.5, 32);
+            const midMat = new THREE.MeshPhongMaterial({ color: 0xffffff }); // White frosting
+            const mid = new THREE.Mesh(midGeo, midMat);
+            mid.position.y = 2.75;
+            mid.castShadow = true;
+            cakeGroup.add(mid);
+
+            // Top layer
+            const topGeo = new THREE.CylinderGeometry(2, 2, 1, 32);
+            const topMat = new THREE.MeshPhongMaterial({ color: 0xff66a3 }); // Pink frosting
+            const top = new THREE.Mesh(topGeo, topMat);
+            top.position.y = 3.75;
+            top.castShadow = true;
+            cakeGroup.add(top);
+
+            // Candles (simple points of light)
+            for (let i = 0; i < 4; i++) {
+                const candleLight = new THREE.PointLight(0xffaa00, 5, 5);
+                const angle = i * Math.PI / 2;
+                candleLight.position.set(Math.cos(angle) * 1.5, 4.5, Math.sin(angle) * 1.5);
+                cakeGroup.add(candleLight);
+            }
+
+            scene.add(cakeGroup);
+        }
+
+        function createBalloons() {
+            const balloonGeometry = new THREE.SphereGeometry(1, 32, 32);
+            const colors = [0xff69b4, 0x00ced1, 0xffa500, 0x9400d3, 0xadff2f]; // Fun colors
+
+            for (let i = 0; i < config.numBalloons; i++) {
+                const material = new THREE.MeshPhongMaterial({
+                    color: colors[i % colors.length],
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const balloon = new THREE.Mesh(balloonGeometry, material);
+                balloon.scale.y = 1.5; // Elongate for a balloon shape
+                balloon.position.set(
+                    rand(-config.roomSize / 2, config.roomSize / 2),
+                    rand(5, config.roomSize * 1.5), // Start floating high
+                    rand(-config.roomSize / 2, config.roomSize / 2)
+                );
+                balloon.userData.velocity = new THREE.Vector3(rand(-0.01, 0.01), rand(0.01, 0.05), rand(-0.01, 0.01));
+                scene.add(balloon);
+                balloons.push(balloon);
+
+                // Add string (simple cylinder)
+                const stringGeo = new THREE.CylinderGeometry(0.05, 0.05, 5, 8);
+                const stringMat = new THREE.MeshBasicMaterial({ color: 0x444444 });
+                const string = new THREE.Mesh(stringGeo, stringMat);
+                string.position.y = -2.5;
+                balloon.add(string); // Add to balloon group
+            }
+        }
+
+        function createConfetti() {
+            const confettiGeometry = new THREE.PlaneGeometry(0.2, 0.2);
+            const colors = [0xffd700, 0x00ffff, 0xff00ff, 0xffa500]; // Gold, Cyan, Magenta, Orange
+
+            for (let i = 0; i < config.numConfetti; i++) {
+                const material = new THREE.MeshBasicMaterial({ color: colors[i % colors.length], side: THREE.DoubleSide });
+                const piece = new THREE.Mesh(confettiGeometry, material);
+                piece.position.set(
+                    rand(-config.roomSize / 2, config.roomSize / 2),
+                    rand(5, config.roomSize),
+                    rand(-config.roomSize / 2, config.roomSize / 2)
+                );
+                piece.rotation.set(rand(0, Math.PI), rand(0, Math.PI), rand(0, Math.PI));
+                scene.add(piece);
+                confetti.push(piece);
+            }
+        }
+        
+        function createGifts() {
+            const giftMaterials = [
+                new THREE.MeshPhongMaterial({ color: 0xffa500 }), // Orange box
+                new THREE.MeshPhongMaterial({ color: 0x00ff00 }), // Green box
+                new THREE.MeshPhongMaterial({ color: 0xff00ff }), // Magenta box
+                new THREE.MeshPhongMaterial({ color: 0x00aaff }), // Blue box
+            ];
+            const ribbonMat = new THREE.MeshPhongMaterial({ color: 0xffffff }); // White ribbon
+
+            for (let i = 0; i < 5; i++) {
+                // Random box dimensions
+                const sizeX = rand(1.5, 3);
+                const sizeY = rand(1, 2);
+                const sizeZ = rand(1.5, 3);
+
+                const giftGroup = new THREE.Group();
+                
+                // Box
+                const giftGeo = new THREE.BoxGeometry(sizeX, sizeY, sizeZ);
+                const gift = new THREE.Mesh(giftGeo, giftMaterials[i % giftMaterials.length]);
+                gift.castShadow = true;
+                giftGroup.add(gift);
+
+                // Add ribbons (X-axis wrap)
+                const ribbonGeoX = new THREE.BoxGeometry(sizeX * 1.05, sizeY * 1.05, 0.2);
+                const ribbonX = new THREE.Mesh(ribbonGeoX, ribbonMat);
+                giftGroup.add(ribbonX);
+
+                // Add ribbons (Z-axis wrap)
+                const ribbonGeoZ = new THREE.BoxGeometry(0.2, sizeY * 1.05, sizeZ * 1.05);
+                const ribbonZ = new THREE.Mesh(ribbonGeoZ, ribbonMat);
+                giftGroup.add(ribbonZ);
+                
+                // Position gifts randomly near the floor
+                giftGroup.position.set(
+                    rand(-config.roomSize / 2 + 3, config.roomSize / 2 - 3),
+                    sizeY / 2, // Half height to rest on floor
+                    rand(-config.roomSize / 2 + 5, config.roomSize / 2 - 2)
+                );
+                
+                // Rotate slightly for a scattered look
+                giftGroup.rotation.y = rand(0, Math.PI / 4);
+
+                scene.add(giftGroup);
+            }
+        }
+
+        // --- ANIMATION LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const time = Date.now() * 0.0001;
+
+            // 1. Balloon movement (floating)
+            balloons.forEach(b => {
+                // Apply 'wind' noise
+                b.position.x += Math.sin(time * 5 + b.id) * 0.01;
+                b.position.z += Math.cos(time * 4 + b.id) * 0.01;
+
+                // Simple lift/oscillation
+                b.position.y += b.userData.velocity.y;
+                if (b.position.y > config.roomSize * 1.5) {
+                    b.position.y = 0; // Reset height
+                }
+            });
+
+            // 2. Confetti movement (falling and spinning)
+            confetti.forEach(c => {
+                c.rotation.x += 0.05;
+                c.rotation.y += 0.02;
+                c.rotation.z += 0.03;
+
+                c.position.y -= 0.05; // Fall slowly
+                if (c.position.y < 0) {
+                    // Reset to the top
+                    c.position.y = config.roomSize;
+                }
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        // --- GSAP CAMERA TIMELINE ---
+        function setupCameraTimeline() {
+            const timeline = gsap.timeline({
+                defaults: { duration: 4, ease: "power2.inOut" }
+            });
+
+            // Target where the camera should look (center of the room/cake area)
+            const lookTarget = new THREE.Vector3(0, 3, -config.roomSize / 2 + 2);
+
+            // Helper to update camera lookAt in the timeline
+            const updateLookAt = (target) => {
+                camera.lookAt(target);
+            };
+
+            // 1. Zoom In (Initial move from far view into the room)
+            timeline.to(camera.position, {
+                duration: 5,
+                x: 10,
+                y: 5,
+                z: 10,
+                onUpdate: () => updateLookAt(new THREE.Vector3(0, 5, 0))
+            }, 0);
+
+            // 2. Mid-Room Sweep (Look around the decorations)
+            timeline.to(camera.position, {
+                duration: 5,
+                x: -8,
+                y: 8,
+                z: 5,
+                onUpdate: () => updateLookAt(new THREE.Vector3(0, 5, 0))
+            }, ">");
+
+            // 3. Final Approach (Focus on the cake)
+            timeline.to(camera.position, {
+                duration: 5,
+                x: 0,
+                y: 4,
+                z: -config.roomSize / 2 + 5, // Close to the cake wall
+                onUpdate: () => updateLookAt(lookTarget)
+            }, ">");
+
+            // 4. Tight Zoom on Cake
+            timeline.to(camera.position, {
+                duration: 3,
+                x: 0,
+                y: 4,
+                z: -config.roomSize / 2 + 3, // Very close to the cake
+                ease: "power3.out",
+                onUpdate: () => updateLookAt(lookTarget)
+            }, ">");
+
+            // 5. Text Reveal
+            timeline.call(() => {
+                const textElement = document.getElementById('birthday-text');
+                // Use the globally set name
+                textElement.innerHTML = `Happy Birthday ${globalName}!`;
+                textElement.classList.add('text-active');
+            }, null, ">-1"); // Start text fade-in 1 second before the final zoom ends
+        }
+
+        // --- MAIN ENTRY POINT (Handles Name Input) ---
+        window.onload = function() {
+            const inputElement = document.getElementById('name-input');
+            const startButton = document.getElementById('start-button');
+            const modal = document.getElementById('prompt-modal');
+
+            // Focus on input immediately
+            inputElement.focus();
+
+            const startAnimation = () => {
+                let name = inputElement.value.trim();
+                // Use default if input is empty
+                if (name === "") {
+                    name = "Someone Special";
+                }
+                
+                // Hide prompt with smooth GSAP animation
+                gsap.to(modal, { 
+                    opacity: 0, 
+                    duration: 0.5, 
+                    onComplete: () => {
+                        modal.style.display = 'none';
+                        initScene(name); // Start the 3D scene with the custom name
+                    }
+                });
+            };
+
+            // Event listeners for button click and 'Enter' key press
+            startButton.addEventListener('click', startAnimation);
+            inputElement.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    startAnimation();
+                }
+            });
+        };
+
+    </script>
+</body>
+</html>
