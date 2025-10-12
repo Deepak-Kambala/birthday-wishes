@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎉 3D Birthday Celebration</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+        #canvas-container { 
+            width: 100vw; 
+            height: 100vh; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .modal-backdrop {
+            backdrop-filter: blur(20px);
+            background: rgba(0, 0, 0, 0.4);
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+        #greeting-text {
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        .float-anim {
+            animation: float 3s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <!-- Input Modal -->
+    <div id="name-modal" class="modal-backdrop fixed inset-0 flex items-center justify-center z-50">
+        <div class="glass-effect rounded-3xl p-8 md:p-12 max-w-md w-full mx-4 shadow-2xl transform transition-all">
+            <div class="text-center mb-8">
+                <div class="text-6xl mb-4 float-anim">🎂</div>
+                <h1 class="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
+                    Birthday Celebration
+                </h1>
+                <p class="text-gray-600 text-sm">Enter your name to begin the magical experience</p>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label for="name-input" class="block text-sm font-medium text-gray-700 mb-2">
+                        What's your name?
+                    </label>
+                    <input 
+                        type="text" 
+                        id="name-input" 
+                        placeholder="Enter your name here..."
+                        class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:outline-none transition-all"
+                        autocomplete="off"
+                    />
+                </div>
+                
+                <button 
+                    id="start-btn" 
+                    class="btn-primary w-full py-3 rounded-xl text-white font-semibold text-lg shadow-lg"
+                >
+                    🎉 Start Celebration
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Greeting Overlay -->
+    <div id="greeting-overlay" class="fixed inset-0 pointer-events-none z-40 flex items-center justify-center opacity-0 transition-opacity duration-1000">
+        <div class="text-center">
+            <h2 id="greeting-text" class="text-5xl md:text-7xl font-bold text-white mb-4"></h2>
+            <p class="text-2xl md:text-3xl text-white opacity-90">🎊 Let's celebrate! 🎊</p>
+        </div>
+    </div>
+
+    <!-- 3D Canvas -->
+    <div id="canvas-container"></div>
+
+    <script>
+        // Configuration
+        const config = {
+            roomSize: { width: 20, height: 10, depth: 20 },
+            numBalloons: 25,
+            numConfetti: 200,
+            numGifts: 8
+        };
+
+        let scene, camera, renderer;
+        let balloons = [], confetti = [];
+        let userName = '';
+
+        // Initialize Three.js Scene
+        function init() {
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x8B5CF6, 10, 50);
+
+            camera = new THREE.PerspectiveCamera(
+                75,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(0, 3, 15);
+            camera.lookAt(0, 2, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const spotLight = new THREE.SpotLight(0xffffff, 0.8);
+            spotLight.position.set(0, 15, 0);
+            spotLight.castShadow = true;
+            spotLight.shadow.mapSize.width = 2048;
+            spotLight.shadow.mapSize.height = 2048;
+            scene.add(spotLight);
+
+            // Create scene elements
+            createRoom();
+            createFloor();
+            createBalloons();
+            createConfetti();
+            createGifts();
+            createCake();
+            createLights();
+
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize);
+            
+            animate();
+        }
+
+        function createRoom() {
+            const wallMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0xFDE68A,
+                side: THREE.BackSide 
+            });
+
+            const wallGeometry = new THREE.BoxGeometry(
+                config.roomSize.width,
+                config.roomSize.height,
+                config.roomSize.depth
+            );
+            const room = new THREE.Mesh(wallGeometry, wallMaterial);
+            room.position.y = config.roomSize.height / 2;
+            room.receiveShadow = true;
+            scene.add(room);
+        }
+
+        function createFloor() {
+            const floorGeometry = new THREE.PlaneGeometry(
+                config.roomSize.width,
+                config.roomSize.depth
+            );
+            const floorMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0xEC4899,
+                shininess: 30
+            });
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+        }
+
+        function createBalloons() {
+            const colors = [0xFF6B6B, 0x4ECDC4, 0xFFE66D, 0x95E1D3, 0xF38181];
+            
+            for (let i = 0; i < config.numBalloons; i++) {
+                const balloonGroup = new THREE.Group();
+                
+                // Balloon body
+                const geometry = new THREE.SphereGeometry(0.5, 32, 32);
+                const material = new THREE.MeshPhongMaterial({ 
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    shininess: 100
+                });
+                const balloon = new THREE.Mesh(geometry, material);
+                balloon.castShadow = true;
+                balloonGroup.add(balloon);
+
+                // String
+                const stringGeometry = new THREE.CylinderGeometry(0.02, 0.02, 2, 8);
+                const stringMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                const string = new THREE.Mesh(stringGeometry, stringMaterial);
+                string.position.y = -1.5;
+                balloonGroup.add(string);
+
+                balloonGroup.position.set(
+                    (Math.random() - 0.5) * 15,
+                    Math.random() * 5 + 3,
+                    (Math.random() - 0.5) * 15
+                );
+                
+                balloonGroup.userData = {
+                    floatSpeed: 0.5 + Math.random() * 0.5,
+                    floatOffset: Math.random() * Math.PI * 2
+                };
+                
+                balloons.push(balloonGroup);
+                scene.add(balloonGroup);
+            }
+        }
+
+        function createConfetti() {
+            const colors = [0xFF6B6B, 0x4ECDC4, 0xFFE66D, 0x95E1D3, 0xF38181, 0xA8E6CF];
+            
+            for (let i = 0; i < config.numConfetti; i++) {
+                const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.02);
+                const material = new THREE.MeshPhongMaterial({ 
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    shininess: 100
+                });
+                const piece = new THREE.Mesh(geometry, material);
+                
+                piece.position.set(
+                    (Math.random() - 0.5) * 18,
+                    Math.random() * 10 + 5,
+                    (Math.random() - 0.5) * 18
+                );
+                
+                piece.rotation.set(
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI
+                );
+                
+                piece.userData = {
+                    velocity: Math.random() * 0.02 + 0.01,
+                    rotationSpeed: {
+                        x: (Math.random() - 0.5) * 0.1,
+                        y: (Math.random() - 0.5) * 0.1,
+                        z: (Math.random() - 0.5) * 0.1
+                    }
+                };
+                
+                confetti.push(piece);
+                scene.add(piece);
+            }
+        }
+
+        function createGifts() {
+            const colors = [0xFF6B6B, 0x4ECDC4, 0xFFE66D, 0x95E1D3, 0xF38181, 0xDDA15E];
+            
+            for (let i = 0; i < config.numGifts; i++) {
+                const size = Math.random() * 0.5 + 0.5;
+                const giftGroup = new THREE.Group();
+                
+                // Gift box
+                const boxGeometry = new THREE.BoxGeometry(size, size, size);
+                const boxMaterial = new THREE.MeshPhongMaterial({ 
+                    color: colors[Math.floor(Math.random() * colors.length)]
+                });
+                const box = new THREE.Mesh(boxGeometry, boxMaterial);
+                box.castShadow = true;
+                giftGroup.add(box);
+                
+                // Ribbon
+                const ribbonGeometry = new THREE.BoxGeometry(size * 1.1, size * 0.1, size * 0.1);
+                const ribbonMaterial = new THREE.MeshPhongMaterial({ color: 0xFFD700 });
+                const ribbon1 = new THREE.Mesh(ribbonGeometry, ribbonMaterial);
+                const ribbon2 = new THREE.Mesh(ribbonGeometry, ribbonMaterial);
+                ribbon2.rotation.y = Math.PI / 2;
+                giftGroup.add(ribbon1);
+                giftGroup.add(ribbon2);
+                
+                const angle = (i / config.numGifts) * Math.PI * 2;
+                const radius = 6;
+                giftGroup.position.set(
+                    Math.cos(angle) * radius,
+                    size / 2,
+                    Math.sin(angle) * radius
+                );
+                giftGroup.rotation.y = Math.random() * Math.PI;
+                
+                scene.add(giftGroup);
+            }
+        }
+
+        function createCake() {
+            const cakeGroup = new THREE.Group();
+            
+            // Bottom tier
+            const tier1Geometry = new THREE.CylinderGeometry(1.5, 1.5, 0.8, 32);
+            const tier1Material = new THREE.MeshPhongMaterial({ color: 0xFFB6C1 });
+            const tier1 = new THREE.Mesh(tier1Geometry, tier1Material);
+            tier1.position.y = 0.4;
+            tier1.castShadow = true;
+            cakeGroup.add(tier1);
+            
+            // Middle tier
+            const tier2Geometry = new THREE.CylinderGeometry(1, 1, 0.6, 32);
+            const tier2Material = new THREE.MeshPhongMaterial({ color: 0xFFC0CB });
+            const tier2 = new THREE.Mesh(tier2Geometry, tier2Material);
+            tier2.position.y = 1.1;
+            tier2.castShadow = true;
+            cakeGroup.add(tier2);
+            
+            // Top tier
+            const tier3Geometry = new THREE.CylinderGeometry(0.6, 0.6, 0.4, 32);
+            const tier3Material = new THREE.MeshPhongMaterial({ color: 0xFFDAE9 });
+            const tier3 = new THREE.Mesh(tier3Geometry, tier3Material);
+            tier3.position.y = 1.6;
+            tier3.castShadow = true;
+            cakeGroup.add(tier3);
+            
+            // Candles (as point lights)
+            for (let i = 0; i < 5; i++) {
+                const candleLight = new THREE.PointLight(0xFFAA00, 1, 5);
+                const angle = (i / 5) * Math.PI * 2;
+                candleLight.position.set(
+                    Math.cos(angle) * 0.4,
+                    2,
+                    Math.sin(angle) * 0.4
+                );
+                cakeGroup.add(candleLight);
+                
+                // Candle stick
+                const candleGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.3, 8);
+                const candleMaterial = new THREE.MeshPhongMaterial({ color: 0xFFFFE0 });
+                const candle = new THREE.Mesh(candleGeometry, candleMaterial);
+                candle.position.copy(candleLight.position);
+                candle.position.y -= 0.15;
+                cakeGroup.add(candle);
+            }
+            
+            cakeGroup.position.set(0, 0, 0);
+            scene.add(cakeGroup);
+        }
+
+        function createLights() {
+            // Colored accent lights
+            const colors = [0xFF6B6B, 0x4ECDC4, 0xFFE66D, 0x95E1D3];
+            colors.forEach((color, i) => {
+                const light = new THREE.PointLight(color, 0.5, 15);
+                const angle = (i / colors.length) * Math.PI * 2;
+                light.position.set(
+                    Math.cos(angle) * 8,
+                    5,
+                    Math.sin(angle) * 8
+                );
+                scene.add(light);
+            });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const time = Date.now() * 0.001;
+            
+            // Animate balloons
+            balloons.forEach(balloon => {
+                balloon.position.y += Math.sin(time * balloon.userData.floatSpeed + balloon.userData.floatOffset) * 0.01;
+                balloon.rotation.y += 0.005;
+            });
+            
+            // Animate confetti
+            confetti.forEach(piece => {
+                piece.position.y -= piece.userData.velocity;
+                piece.rotation.x += piece.userData.rotationSpeed.x;
+                piece.rotation.y += piece.userData.rotationSpeed.y;
+                piece.rotation.z += piece.userData.rotationSpeed.z;
+                
+                if (piece.position.y < 0) {
+                    piece.position.y = 10;
+                    piece.position.x = (Math.random() - 0.5) * 18;
+                    piece.position.z = (Math.random() - 0.5) * 18;
+                }
+            });
+            
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function startCelebration() {
+            userName = document.getElementById('name-input').value.trim();
+            
+            if (!userName) {
+                alert('Please enter your name to continue! 🎉');
+                return;
+            }
+            
+            // Hide modal
+            gsap.to('#name-modal', {
+                opacity: 0,
+                duration: 0.5,
+                onComplete: () => {
+                    document.getElementById('name-modal').style.display = 'none';
+                }
+            });
+            
+            // Show greeting
+            const greetingText = document.getElementById('greeting-text');
+            greetingText.textContent = `Happy Birthday, ${userName}!`;
+            
+            gsap.to('#greeting-overlay', {
+                opacity: 1,
+                duration: 1,
+                delay: 0.5
+            });
+            
+            gsap.to('#greeting-overlay', {
+                opacity: 0,
+                duration: 1,
+                delay: 3,
+            });
+            
+            // Camera animation
+            gsap.timeline()
+                .to(camera.position, {
+                    x: -8,
+                    y: 5,
+                    z: 8,
+                    duration: 3,
+                    ease: "power2.inOut",
+                    onUpdate: () => camera.lookAt(0, 2, 0)
+                })
+                .to(camera.position, {
+                    x: 8,
+                    y: 4,
+                    z: -8,
+                    duration: 3,
+                    ease: "power2.inOut",
+                    onUpdate: () => camera.lookAt(0, 2, 0)
+                })
+                .to(camera.position, {
+                    x: 0,
+                    y: 3,
+                    z: 8,
+                    duration: 3,
+                    ease: "power2.inOut",
+                    onUpdate: () => camera.lookAt(0, 1.5, 0)
+                });
+        }
+
+        // Event Listeners
+        document.getElementById('start-btn').addEventListener('click', startCelebration);
+        document.getElementById('name-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') startCelebration();
+        });
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            init();
+            document.getElementById('name-input').focus();
+        });
+    </script>
+</body>
+</html>
