@@ -3,155 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Birthday Celebration - Happy Birthday!</title>
-    <meta name="description" content="A stunning 3D birthday celebration experience with balloons, confetti, and a beautiful cake. Celebrate someone special with this interactive animation.">
-    
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="3D Birthday Celebration">
-    <meta property="og:description" content="A stunning 3D birthday celebration experience with balloons, confetti, and a beautiful cake.">
-    
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:title" content="3D Birthday Celebration">
-    <meta property="twitter:description" content="A stunning 3D birthday celebration experience with balloons, confetti, and a beautiful cake.">
-    
+    <title>3D Birthday Celebration</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js"></script>
+    <!-- Three.js CDN for 3D rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- GSAP CDN for professional-grade animation control -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+        /* Custom CSS for body and canvas to ensure full-screen 3D rendering */
         body {
-            font-family: 'Inter', sans-serif;
+            margin: 0;
             overflow: hidden;
-            background: linear-gradient(135deg, #0a001f 0%, #1a0033 50%, #2a0066 100%);
+            font-family: 'Inter', sans-serif;
+            background-color: #0d0d1a; /* Dark background for better contrast */
         }
-        
         #scene-container {
             width: 100vw;
             height: 100vh;
             position: relative;
         }
-        
         canvas {
             display: block;
         }
-        
+        /* Styles for the final overlay text */
         .overlay-text {
             pointer-events: none;
             opacity: 0;
-            transition: opacity 1.5s ease-in-out;
-            background: linear-gradient(135deg, #ffd700 0%, #ff69b4 50%, #00ffff 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: shimmer 3s infinite;
+            transition: opacity 1s ease-in-out;
+            text-shadow: 0 0 10px #ff00ff, 0 0 20px #00ffff;
         }
-        
         .text-active {
             opacity: 1 !important;
-        }
-        
-        @keyframes shimmer {
-            0%, 100% {
-                text-shadow: 0 0 20px rgba(255, 0, 255, 0.5), 0 0 40px rgba(0, 255, 255, 0.5);
-            }
-            50% {
-                text-shadow: 0 0 40px rgba(255, 0, 255, 0.8), 0 0 80px rgba(0, 255, 255, 0.8);
-            }
-        }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-        }
-        
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-        
-        .modal-backdrop {
-            background: rgba(0, 0, 0, 0.9);
-            backdrop-filter: blur(10px);
-        }
-        
-        .modal-content {
-            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-            box-shadow: 0 20px 60px rgba(255, 105, 180, 0.3);
-            animation: float 3s ease-in-out infinite;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%);
-            transition: all 0.3s ease;
-        }
-        
-        .btn-primary:hover {
-            transform: scale(1.05);
-            box-shadow: 0 10px 30px rgba(147, 51, 234, 0.5);
-        }
-        
-        .btn-replay {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            transition: all 0.3s ease;
-        }
-        
-        .btn-replay:hover {
-            background: rgba(255, 255, 255, 0.2);
-            border-color: rgba(255, 255, 255, 0.5);
-            transform: scale(1.05);
-        }
-        
-        input:focus {
-            outline: none;
-            border-color: #9333ea;
-            box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.3);
         }
     </style>
 </head>
 <body>
+
     <div id="scene-container">
-        <!-- Birthday Text Overlay -->
-        <div id="birthday-text" class="overlay-text fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center text-4xl md:text-7xl lg:text-8xl font-black tracking-wider z-40 px-4">
+        <!-- Overlay for the final "Happy Birthday" text -->
+        <div id="birthday-text"
+             class="overlay-text fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center text-6xl md:text-8xl font-black tracking-widest text-yellow-300 z-40">
             Happy Birthday Someone Special!
         </div>
 
-        <!-- Replay Button -->
-        <button id="replay-button" class="btn-replay fixed bottom-8 right-8 px-6 py-3 rounded-full font-bold text-white opacity-0 pointer-events-none transition-all duration-500 z-50" style="display: none;">
-            🎉 Replay
-        </button>
-
-        <!-- Name Input Modal -->
-        <div id="prompt-modal" class="modal-backdrop fixed top-0 left-0 w-full h-full flex items-center justify-center z-50">
-            <div class="modal-content p-8 rounded-2xl max-w-md w-full mx-4 text-center">
-                <h2 class="text-4xl font-black mb-4 bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">
-                    🎉 Birthday Time! 🎉
-                </h2>
-                <p class="text-gray-700 mb-6 text-lg font-medium">
-                    Who are we celebrating today?
-                </p>
-                <input 
-                    type="text" 
-                    id="name-input" 
-                    placeholder="Enter name here..."
-                    class="w-full p-4 mb-6 border-2 border-purple-300 rounded-xl text-xl font-semibold text-center transition-all duration-300"
-                    maxlength="30"
-                    autocomplete="off"
-                >
-                <button 
-                    id="start-button"
-                    class="btn-primary w-full text-white font-extrabold py-4 rounded-xl text-lg"
-                >
-                    Start Celebration ✨
+        <!-- Input Prompt Overlay (acts as the initial loading/input screen) -->
+        <div id="prompt-modal" class="fixed top-0 left-0 w-full h-full flex items-center justify-center bg-black/90 z-50">
+            <div class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full text-center transform scale-100 transition-transform duration-500">
+                <h2 class="text-3xl font-extrabold mb-4 text-pink-600">🎉 Happy Birthday! 🎉</h2>
+                <p class="text-gray-700 mb-6">Who are we celebrating today? Enter their name:</p>
+                <input type="text" id="name-input" placeholder="e.g., Alex"
+                       class="w-full p-3 mb-6 border-2 border-purple-400 rounded-lg focus:outline-none focus:ring-4 focus:ring-purple-300 text-xl font-semibold text-center"
+                       maxlength="25">
+                <button id="start-button"
+                        class="w-full bg-purple-600 hover:bg-purple-700 text-white font-extrabold py-3 rounded-xl transition duration-300 transform hover:scale-[1.02] shadow-lg shadow-purple-500/50">
+                    Start Animation
                 </button>
             </div>
         </div>
@@ -160,144 +66,106 @@
     <script>
         // Global Three.js variables
         let scene, camera, renderer, confetti = [], balloons = [];
-        let animationId = null;
-        let isSceneActive = false;
+        let globalName = "Someone Special"; // Variable to hold the name entered by the user
 
         // Configuration
         const config = {
             roomSize: 20,
             numBalloons: 15,
-            numConfetti: 150,
-            numGifts: 6
+            numConfetti: 100,
+            animationDuration: 15 // Total seconds for the main camera path
         };
+
+        // Utility function to get a random number within a range
+        const rand = (min, max) => Math.random() * (max - min) + min;
 
         // --- SCENE INITIALIZATION ---
         function initScene(name) {
-            // Clean up existing scene if any
-            cleanupScene();
+            // Set the name retrieved from the input modal
+            globalName = name;
             
             const container = document.getElementById('scene-container');
             const width = window.innerWidth;
             const height = window.innerHeight;
 
-            isSceneActive = true;
-
             // 1. Scene
             scene = new THREE.Scene();
-            scene.fog = new THREE.Fog(0x0a001f, 10, 40);
+            scene.fog = new THREE.Fog(0x100030, 10, 35); // Slight fog for depth
 
-            // 2. Camera
+            // 2. Camera (Starting position)
             camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 100);
-            camera.position.set(20, 10, 20);
+            camera.position.set(20, 10, 20); // Far back, high up
             camera.lookAt(0, 5, 0);
 
             // 3. Renderer
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(width, height);
-            renderer.setClearColor(0x0a001f);
+            renderer.setClearColor(0x100030);
             renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             container.appendChild(renderer.domElement);
 
             // 4. Lighting
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
             scene.add(ambientLight);
 
-            const spotLight = new THREE.SpotLight(0xffffff, 40, 50, Math.PI * 0.2, 0.5, 1);
+            const spotLight = new THREE.SpotLight(0xffffff, 30, 50, Math.PI * 0.2, 0.5, 1);
             spotLight.position.set(0, 15, 0);
             spotLight.castShadow = true;
-            spotLight.shadow.mapSize.width = 2048;
-            spotLight.shadow.mapSize.height = 2048;
+            spotLight.shadow.mapSize.width = 1024;
+            spotLight.shadow.mapSize.height = 1024;
             scene.add(spotLight);
 
-            const pinkLight = new THREE.PointLight(0xff1493, 15, 30);
-            pinkLight.position.set(-10, 10, -10);
-            scene.add(pinkLight);
-
-            const cyanLight = new THREE.PointLight(0x00ffff, 15, 30);
-            cyanLight.position.set(10, 10, 10);
-            scene.add(cyanLight);
-
-            // 5. Build Scene
+            // 5. Build Room Elements
             createRoom();
             createCake();
             createBalloons();
             createConfetti();
-            createGifts();
+            createGifts(); // New: Add gift boxes
 
-            // 6. Start Animation
+            // 6. Start the show
             animate();
-            setupCameraAnimation(name);
+            setupCameraTimeline();
 
-            // 7. Window Resize
+            // Handle window resize
             window.addEventListener('resize', onWindowResize);
         }
 
         function onWindowResize() {
-            if (!camera || !renderer) return;
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        function cleanupScene() {
-            isSceneActive = false;
-            
-            if (animationId) {
-                cancelAnimationFrame(animationId);
-                animationId = null;
-            }
-            
-            if (renderer && renderer.domElement && renderer.domElement.parentNode) {
-                renderer.domElement.parentNode.removeChild(renderer.domElement);
-            }
-            
-            if (renderer) {
-                renderer.dispose();
-            }
-            
-            balloons = [];
-            confetti = [];
-            scene = null;
-            camera = null;
-            renderer = null;
-        }
-
         // --- OBJECT CREATION ---
+
         function createRoom() {
-            const roomSize = config.roomSize;
-            
+            const size = config.roomSize;
+            // Updated room colors for a more vibrant party look
+            const wallMaterial = new THREE.MeshPhongMaterial({ color: 0x5555ff, side: THREE.BackSide });
+            const floorMaterial = new THREE.MeshPhongMaterial({ color: 0xff8888 });
+
             // Floor
-            const floorGeometry = new THREE.PlaneGeometry(roomSize * 2, roomSize * 2);
-            const floorMaterial = new THREE.MeshStandardMaterial({
-                color: 0x1a0033,
-                roughness: 0.8,
-                metalness: 0.2,
-            });
-            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(size * 2, size * 2), floorMaterial);
             floor.rotation.x = -Math.PI / 2;
+            floor.position.y = 0;
             floor.receiveShadow = true;
             scene.add(floor);
 
-            // Walls
-            const wallMaterial = new THREE.MeshStandardMaterial({
-                color: 0x2a0066,
-                side: THREE.BackSide,
-                roughness: 0.9,
-            });
-            const roomGeometry = new THREE.BoxGeometry(roomSize * 2, roomSize * 2, roomSize * 2);
+            // Walls (simplified large cube with back side rendered)
+            const roomGeometry = new THREE.BoxGeometry(size * 2, size * 2, size * 2);
             const room = new THREE.Mesh(roomGeometry, wallMaterial);
-            room.position.y = roomSize;
+            room.position.y = size; // Center the room floor at y=0
+            room.receiveShadow = true;
             scene.add(room);
         }
 
         function createCake() {
             const cakeGroup = new THREE.Group();
-            cakeGroup.position.set(0, 1.5, -config.roomSize / 2 + 2);
+            cakeGroup.position.set(0, 1.5, -config.roomSize / 2 + 2); // Place near a 'wall'
 
-            // Base layer
+            // Bottom layer
             const baseGeo = new THREE.CylinderGeometry(3, 3, 2, 32);
-            const baseMat = new THREE.MeshStandardMaterial({ color: 0xffd700, roughness: 0.5 });
+            const baseMat = new THREE.MeshPhongMaterial({ color: 0xe6b800 }); // Yellow cake
             const base = new THREE.Mesh(baseGeo, baseMat);
             base.position.y = 1;
             base.castShadow = true;
@@ -305,7 +173,7 @@
 
             // Middle layer
             const midGeo = new THREE.CylinderGeometry(2.5, 2.5, 1.5, 32);
-            const midMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
+            const midMat = new THREE.MeshPhongMaterial({ color: 0xffffff }); // White frosting
             const mid = new THREE.Mesh(midGeo, midMat);
             mid.position.y = 2.75;
             mid.castShadow = true;
@@ -313,305 +181,249 @@
 
             // Top layer
             const topGeo = new THREE.CylinderGeometry(2, 2, 1, 32);
-            const topMat = new THREE.MeshStandardMaterial({ color: 0xff69b4, roughness: 0.3 });
+            const topMat = new THREE.MeshPhongMaterial({ color: 0xff66a3 }); // Pink frosting
             const top = new THREE.Mesh(topGeo, topMat);
             top.position.y = 3.75;
             top.castShadow = true;
             cakeGroup.add(top);
 
-            // Candles with flames
-            const candlePositions = [
-                { x: 1.2, z: 0 },
-                { x: -1.2, z: 0 },
-                { x: 0, z: 1.2 },
-                { x: 0, z: -1.2 },
-            ];
-
-            candlePositions.forEach(pos => {
-                const candleLight = new THREE.PointLight(0xffaa00, 8, 8);
-                candleLight.position.set(pos.x, 4.5, pos.z);
+            // Candles (simple points of light)
+            for (let i = 0; i < 4; i++) {
+                const candleLight = new THREE.PointLight(0xffaa00, 5, 5);
+                const angle = i * Math.PI / 2;
+                candleLight.position.set(Math.cos(angle) * 1.5, 4.5, Math.sin(angle) * 1.5);
                 cakeGroup.add(candleLight);
-
-                const flameGeo = new THREE.SphereGeometry(0.15, 8, 8);
-                const flameMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
-                const flame = new THREE.Mesh(flameGeo, flameMat);
-                flame.position.set(pos.x, 4.5, pos.z);
-                cakeGroup.add(flame);
-            });
+            }
 
             scene.add(cakeGroup);
         }
 
         function createBalloons() {
-            const balloonColors = [0xff69b4, 0x00ced1, 0xffa500, 0x9400d3, 0xadff2f];
+            const balloonGeometry = new THREE.SphereGeometry(1, 32, 32);
+            const colors = [0xff69b4, 0x00ced1, 0xffa500, 0x9400d3, 0xadff2f]; // Fun colors
 
             for (let i = 0; i < config.numBalloons; i++) {
-                const balloonGeo = new THREE.SphereGeometry(1, 32, 32);
-                const balloonMat = new THREE.MeshStandardMaterial({
-                    color: balloonColors[i % balloonColors.length],
+                const material = new THREE.MeshPhongMaterial({
+                    color: colors[i % colors.length],
                     transparent: true,
-                    opacity: 0.9,
-                    roughness: 0.3,
-                    metalness: 0.1,
+                    opacity: 0.8
                 });
-                const balloon = new THREE.Mesh(balloonGeo, balloonMat);
-                balloon.scale.set(1, 1.5, 1);
+                const balloon = new THREE.Mesh(balloonGeometry, material);
+                balloon.scale.y = 1.5; // Elongate for a balloon shape
                 balloon.position.set(
-                    (Math.random() - 0.5) * config.roomSize,
-                    Math.random() * config.roomSize + 5,
-                    (Math.random() - 0.5) * config.roomSize
+                    rand(-config.roomSize / 2, config.roomSize / 2),
+                    rand(5, config.roomSize * 1.5), // Start floating high
+                    rand(-config.roomSize / 2, config.roomSize / 2)
                 );
-                balloon.userData.velocity = new THREE.Vector3(
-                    (Math.random() - 0.5) * 0.02,
-                    Math.random() * 0.03 + 0.02,
-                    (Math.random() - 0.5) * 0.02
-                );
-                balloon.userData.phase = Math.random() * Math.PI * 2;
-                balloon.castShadow = true;
+                balloon.userData.velocity = new THREE.Vector3(rand(-0.01, 0.01), rand(0.01, 0.05), rand(-0.01, 0.01));
                 scene.add(balloon);
                 balloons.push(balloon);
 
-                // String
-                const stringGeo = new THREE.CylinderGeometry(0.03, 0.03, 5, 8);
-                const stringMat = new THREE.MeshBasicMaterial({ color: 0x333333 });
+                // Add string (simple cylinder)
+                const stringGeo = new THREE.CylinderGeometry(0.05, 0.05, 5, 8);
+                const stringMat = new THREE.MeshBasicMaterial({ color: 0x444444 });
                 const string = new THREE.Mesh(stringGeo, stringMat);
                 string.position.y = -2.5;
-                balloon.add(string);
+                balloon.add(string); // Add to balloon group
             }
         }
 
         function createConfetti() {
-            const confettiColors = [0xffd700, 0x00ffff, 0xff00ff, 0xffa500, 0x00ff00];
+            const confettiGeometry = new THREE.PlaneGeometry(0.2, 0.2);
+            const colors = [0xffd700, 0x00ffff, 0xff00ff, 0xffa500]; // Gold, Cyan, Magenta, Orange
 
             for (let i = 0; i < config.numConfetti; i++) {
-                const confettiGeo = new THREE.PlaneGeometry(0.2, 0.3);
-                const confettiMat = new THREE.MeshBasicMaterial({
-                    color: confettiColors[i % confettiColors.length],
-                    side: THREE.DoubleSide,
-                });
-                const piece = new THREE.Mesh(confettiGeo, confettiMat);
+                const material = new THREE.MeshBasicMaterial({ color: colors[i % colors.length], side: THREE.DoubleSide });
+                const piece = new THREE.Mesh(confettiGeometry, material);
                 piece.position.set(
-                    (Math.random() - 0.5) * config.roomSize,
-                    Math.random() * config.roomSize + 10,
-                    (Math.random() - 0.5) * config.roomSize
+                    rand(-config.roomSize / 2, config.roomSize / 2),
+                    rand(5, config.roomSize),
+                    rand(-config.roomSize / 2, config.roomSize / 2)
                 );
-                piece.rotation.set(
-                    Math.random() * Math.PI,
-                    Math.random() * Math.PI,
-                    Math.random() * Math.PI
-                );
-                piece.userData.rotationSpeed = {
-                    x: (Math.random() - 0.5) * 0.1,
-                    y: (Math.random() - 0.5) * 0.1,
-                    z: (Math.random() - 0.5) * 0.1,
-                };
+                piece.rotation.set(rand(0, Math.PI), rand(0, Math.PI), rand(0, Math.PI));
                 scene.add(piece);
                 confetti.push(piece);
             }
         }
-
+        
         function createGifts() {
-            const giftColors = [0xffa500, 0x00ff00, 0xff00ff, 0x00aaff, 0xff4444];
-            
-            for (let i = 0; i < config.numGifts; i++) {
-                const sizeX = Math.random() * 1.5 + 1.5;
-                const sizeY = Math.random() * 1 + 1;
-                const sizeZ = Math.random() * 1.5 + 1.5;
+            const giftMaterials = [
+                new THREE.MeshPhongMaterial({ color: 0xffa500 }), // Orange box
+                new THREE.MeshPhongMaterial({ color: 0x00ff00 }), // Green box
+                new THREE.MeshPhongMaterial({ color: 0xff00ff }), // Magenta box
+                new THREE.MeshPhongMaterial({ color: 0x00aaff }), // Blue box
+            ];
+            const ribbonMat = new THREE.MeshPhongMaterial({ color: 0xffffff }); // White ribbon
+
+            for (let i = 0; i < 5; i++) {
+                // Random box dimensions
+                const sizeX = rand(1.5, 3);
+                const sizeY = rand(1, 2);
+                const sizeZ = rand(1.5, 3);
 
                 const giftGroup = new THREE.Group();
-
+                
+                // Box
                 const giftGeo = new THREE.BoxGeometry(sizeX, sizeY, sizeZ);
-                const giftMat = new THREE.MeshStandardMaterial({
-                    color: giftColors[i % giftColors.length],
-                    roughness: 0.5,
-                    metalness: 0.2,
-                });
-                const gift = new THREE.Mesh(giftGeo, giftMat);
+                const gift = new THREE.Mesh(giftGeo, giftMaterials[i % giftMaterials.length]);
                 gift.castShadow = true;
                 giftGroup.add(gift);
 
-                // Ribbons
-                const ribbonMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.5 });
-                const ribbonX = new THREE.Mesh(
-                    new THREE.BoxGeometry(sizeX * 1.05, sizeY * 1.05, 0.2),
-                    ribbonMat
-                );
+                // Add ribbons (X-axis wrap)
+                const ribbonGeoX = new THREE.BoxGeometry(sizeX * 1.05, sizeY * 1.05, 0.2);
+                const ribbonX = new THREE.Mesh(ribbonGeoX, ribbonMat);
                 giftGroup.add(ribbonX);
 
-                const ribbonZ = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.2, sizeY * 1.05, sizeZ * 1.05),
-                    ribbonMat
-                );
+                // Add ribbons (Z-axis wrap)
+                const ribbonGeoZ = new THREE.BoxGeometry(0.2, sizeY * 1.05, sizeZ * 1.05);
+                const ribbonZ = new THREE.Mesh(ribbonGeoZ, ribbonMat);
                 giftGroup.add(ribbonZ);
-
+                
+                // Position gifts randomly near the floor
                 giftGroup.position.set(
-                    (Math.random() - 0.5) * (config.roomSize - 6),
-                    sizeY / 2,
-                    Math.random() * (config.roomSize / 2) - 2
+                    rand(-config.roomSize / 2 + 3, config.roomSize / 2 - 3),
+                    sizeY / 2, // Half height to rest on floor
+                    rand(-config.roomSize / 2 + 5, config.roomSize / 2 - 2)
                 );
-                giftGroup.rotation.y = Math.random() * Math.PI / 4;
+                
+                // Rotate slightly for a scattered look
+                giftGroup.rotation.y = rand(0, Math.PI / 4);
+
                 scene.add(giftGroup);
             }
         }
 
-        // --- ANIMATION ---
+        // --- ANIMATION LOOP ---
         function animate() {
-            if (!isSceneActive || !scene || !camera || !renderer) return;
-            
-            const time = Date.now() * 0.001;
+            requestAnimationFrame(animate);
 
-            // Balloon animation
-            balloons.forEach((b) => {
-                b.userData.phase += 0.02;
-                b.position.x += Math.sin(time * 2 + b.userData.phase) * 0.015;
-                b.position.z += Math.cos(time * 1.5 + b.userData.phase) * 0.015;
+            const time = Date.now() * 0.0001;
+
+            // 1. Balloon movement (floating)
+            balloons.forEach(b => {
+                // Apply 'wind' noise
+                b.position.x += Math.sin(time * 5 + b.id) * 0.01;
+                b.position.z += Math.cos(time * 4 + b.id) * 0.01;
+
+                // Simple lift/oscillation
                 b.position.y += b.userData.velocity.y;
-
-                if (b.position.y > 25) {
-                    b.position.y = 2;
-                    b.position.x = (Math.random() - 0.5) * 15;
-                    b.position.z = (Math.random() - 0.5) * 15;
+                if (b.position.y > config.roomSize * 1.5) {
+                    b.position.y = 0; // Reset height
                 }
-
-                b.rotation.y += 0.01;
             });
 
-            // Confetti animation
+            // 2. Confetti movement (falling and spinning)
             confetti.forEach(c => {
-                c.rotation.x += c.userData.rotationSpeed.x;
-                c.rotation.y += c.userData.rotationSpeed.y;
-                c.rotation.z += c.userData.rotationSpeed.z;
-                c.position.y -= 0.03;
+                c.rotation.x += 0.05;
+                c.rotation.y += 0.02;
+                c.rotation.z += 0.03;
 
-                if (c.position.y < -2) {
-                    c.position.y = 25;
-                    c.position.x = (Math.random() - 0.5) * 20;
-                    c.position.z = (Math.random() - 0.5) * 20;
+                c.position.y -= 0.05; // Fall slowly
+                if (c.position.y < 0) {
+                    // Reset to the top
+                    c.position.y = config.roomSize;
                 }
             });
 
             renderer.render(scene, camera);
-            animationId = requestAnimationFrame(animate);
         }
 
-        function setupCameraAnimation(name) {
-            const cameraPath = [
-                { pos: new THREE.Vector3(20, 10, 20), target: new THREE.Vector3(0, 5, 0), duration: 4 },
-                { pos: new THREE.Vector3(-10, 8, 8), target: new THREE.Vector3(0, 5, 0), duration: 4 },
-                { pos: new THREE.Vector3(8, 6, -5), target: new THREE.Vector3(0, 3, -config.roomSize / 2 + 2), duration: 4 },
-                { pos: new THREE.Vector3(0, 4, -config.roomSize / 2 + 5), target: new THREE.Vector3(0, 3, -config.roomSize / 2 + 2), duration: 3 },
-            ];
+        // --- GSAP CAMERA TIMELINE ---
+        function setupCameraTimeline() {
+            const timeline = gsap.timeline({
+                defaults: { duration: 4, ease: "power2.inOut" }
+            });
 
-            let currentPathIndex = 0;
-            let pathProgress = 0;
-            let lastTime = Date.now();
+            // Target where the camera should look (center of the room/cake area)
+            const lookTarget = new THREE.Vector3(0, 3, -config.roomSize / 2 + 2);
 
-            function updateCamera() {
-                if (!isSceneActive || currentPathIndex >= cameraPath.length) {
-                    if (currentPathIndex >= cameraPath.length) {
-                        showBirthdayText(name);
-                    }
-                    return;
-                }
+            // Helper to update camera lookAt in the timeline
+            const updateLookAt = (target) => {
+                camera.lookAt(target);
+            };
 
-                const currentTime = Date.now();
-                const deltaTime = (currentTime - lastTime) / 1000;
-                lastTime = currentTime;
+            // 1. Zoom In (Initial move from far view into the room)
+            timeline.to(camera.position, {
+                duration: 5,
+                x: 10,
+                y: 5,
+                z: 10,
+                onUpdate: () => updateLookAt(new THREE.Vector3(0, 5, 0))
+            }, 0);
 
-                const path = cameraPath[currentPathIndex];
-                pathProgress += deltaTime / path.duration;
+            // 2. Mid-Room Sweep (Look around the decorations)
+            timeline.to(camera.position, {
+                duration: 5,
+                x: -8,
+                y: 8,
+                z: 5,
+                onUpdate: () => updateLookAt(new THREE.Vector3(0, 5, 0))
+            }, ">");
 
-                if (pathProgress >= 1) {
-                    pathProgress = 0;
-                    currentPathIndex++;
-                } else {
-                    const t = pathProgress;
-                    const smoothT = t * t * (3 - 2 * t); // Smoothstep
+            // 3. Final Approach (Focus on the cake)
+            timeline.to(camera.position, {
+                duration: 5,
+                x: 0,
+                y: 4,
+                z: -config.roomSize / 2 + 5, // Close to the cake wall
+                onUpdate: () => updateLookAt(lookTarget)
+            }, ">");
 
-                    if (currentPathIndex > 0) {
-                        const prevPath = cameraPath[currentPathIndex - 1];
-                        camera.position.lerpVectors(prevPath.pos, path.pos, smoothT);
-                        const targetPos = new THREE.Vector3().lerpVectors(prevPath.target, path.target, smoothT);
-                        camera.lookAt(targetPos);
-                    } else {
-                        camera.position.copy(path.pos);
-                        camera.lookAt(path.target);
-                    }
-                }
+            // 4. Tight Zoom on Cake
+            timeline.to(camera.position, {
+                duration: 3,
+                x: 0,
+                y: 4,
+                z: -config.roomSize / 2 + 3, // Very close to the cake
+                ease: "power3.out",
+                onUpdate: () => updateLookAt(lookTarget)
+            }, ">");
 
-                requestAnimationFrame(updateCamera);
-            }
-
-            updateCamera();
+            // 5. Text Reveal
+            timeline.call(() => {
+                const textElement = document.getElementById('birthday-text');
+                // Use the globally set name
+                textElement.innerHTML = `Happy Birthday ${globalName}!`;
+                textElement.classList.add('text-active');
+            }, null, ">-1"); // Start text fade-in 1 second before the final zoom ends
         }
 
-        function showBirthdayText(name) {
-            const textElement = document.getElementById('birthday-text');
-            textElement.textContent = `Happy Birthday ${name}!`;
-            textElement.classList.add('text-active');
-            
-            // Show replay button
-            const replayButton = document.getElementById('replay-button');
-            replayButton.style.display = 'block';
-            setTimeout(() => {
-                replayButton.style.opacity = '1';
-                replayButton.style.pointerEvents = 'auto';
-            }, 1000);
-        }
-
-        // --- EVENT HANDLERS ---
+        // --- MAIN ENTRY POINT (Handles Name Input) ---
         window.onload = function() {
             const inputElement = document.getElementById('name-input');
             const startButton = document.getElementById('start-button');
             const modal = document.getElementById('prompt-modal');
-            const replayButton = document.getElementById('replay-button');
 
+            // Focus on input immediately
             inputElement.focus();
 
-            function startAnimation() {
+            const startAnimation = () => {
                 let name = inputElement.value.trim();
+                // Use default if input is empty
                 if (name === "") {
                     name = "Someone Special";
                 }
                 
-                modal.style.transition = 'opacity 0.5s ease-out';
-                modal.style.opacity = '0';
-                
-                setTimeout(() => {
-                    modal.style.display = 'none';
-                    initScene(name);
-                }, 500);
-            }
+                // Hide prompt with smooth GSAP animation
+                gsap.to(modal, { 
+                    opacity: 0, 
+                    duration: 0.5, 
+                    onComplete: () => {
+                        modal.style.display = 'none';
+                        initScene(name); // Start the 3D scene with the custom name
+                    }
+                });
+            };
 
-            function replayAnimation() {
-                const textElement = document.getElementById('birthday-text');
-                textElement.classList.remove('text-active');
-                
-                replayButton.style.opacity = '0';
-                replayButton.style.pointerEvents = 'none';
-                
-                setTimeout(() => {
-                    replayButton.style.display = 'none';
-                    modal.style.display = 'flex';
-                    modal.style.opacity = '0';
-                    inputElement.value = '';
-                    inputElement.focus();
-                    
-                    setTimeout(() => {
-                        modal.style.opacity = '1';
-                    }, 50);
-                }, 500);
-            }
-
+            // Event listeners for button click and 'Enter' key press
             startButton.addEventListener('click', startAnimation);
-            replayButton.addEventListener('click', replayAnimation);
-            
             inputElement.addEventListener('keydown', (event) => {
                 if (event.key === 'Enter') {
                     startAnimation();
                 }
             });
         };
+
     </script>
 </body>
 </html>
